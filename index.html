@@ -1,0 +1,1142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Axon & Mintegral 广告数据分析看板</title>
+  <style>
+    :root {
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --panel-soft: #eef3f6;
+      --ink: #172026;
+      --muted: #64727c;
+      --line: #dce4e8;
+      --axon: #0f766e;
+      --mintegral: #b45309;
+      --blue: #2563eb;
+      --red: #b91c1c;
+      --green: #15803d;
+      --shadow: 0 18px 45px rgba(21, 31, 38, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      letter-spacing: 0;
+    }
+
+    button, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 18px;
+      background: #101820;
+      color: #eef6f7;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      min-height: 52px;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(20, 184, 166, .95), rgba(245, 158, 11, .95)),
+        #12212a;
+      position: relative;
+      flex: 0 0 auto;
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      background: rgba(255,255,255,.9);
+      border-radius: 2px;
+    }
+
+    .brand-mark::before { width: 20px; height: 4px; left: 11px; top: 13px; }
+    .brand-mark::after { width: 4px; height: 20px; left: 19px; top: 11px; }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.25;
+      font-weight: 720;
+    }
+
+    .brand p {
+      margin: 3px 0 0;
+      color: #a8bbc3;
+      font-size: 12px;
+    }
+
+    .nav-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-label {
+      color: #89a1ab;
+      font-size: 12px;
+      padding: 0 8px;
+    }
+
+    .platform-btn,
+    .report-btn {
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: #d7e5e9;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 10px;
+      text-align: left;
+    }
+
+    .platform-btn .left,
+    .report-btn .left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 auto;
+      background: var(--accent, #38bdf8);
+    }
+
+    .platform-btn.active,
+    .report-btn.active {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.14);
+      color: #ffffff;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #d8f3f0;
+      background: rgba(15, 118, 110, .3);
+    }
+
+    .sidebar-note {
+      margin-top: auto;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      padding: 12px;
+      color: #b8cbd2;
+      font-size: 12px;
+      line-height: 1.55;
+      background: rgba(255,255,255,.05);
+    }
+
+    main {
+      min-width: 0;
+      padding: 24px 28px 36px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .title-block h2 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 36px);
+      line-height: 1.15;
+    }
+
+    .title-block p {
+      max-width: 780px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      min-width: 270px;
+    }
+
+    .select-wrap,
+    .ghost-btn {
+      height: 38px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 11px;
+      box-shadow: 0 8px 22px rgba(21,31,38,.04);
+    }
+
+    .select-wrap select {
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: inherit;
+      min-width: 130px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .kpi-grid {
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      margin-bottom: 14px;
+    }
+
+    .card,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .card {
+      padding: 14px;
+      min-height: 110px;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+    }
+
+    .card .label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .metric strong {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .delta {
+      font-size: 12px;
+      color: var(--green);
+      background: #e8f7ee;
+      border-radius: 999px;
+      padding: 3px 7px;
+      white-space: nowrap;
+    }
+
+    .delta.down {
+      color: var(--red);
+      background: #fdecec;
+    }
+
+    .spark {
+      width: 100%;
+      height: 18px;
+    }
+
+    .content-grid {
+      grid-template-columns: minmax(0, 1.58fr) minmax(310px, .82fr);
+      align-items: start;
+    }
+
+    .content-grid > *,
+    .split > * {
+      min-width: 0;
+    }
+
+    .panel {
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.25;
+    }
+
+    .panel-subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--dot, #2563eb);
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 310px;
+      border: 1px solid #e6ecef;
+      border-radius: 8px;
+      background:
+        linear-gradient(#f8fafb 1px, transparent 1px) 0 0 / 100% 25%,
+        linear-gradient(90deg, #f8fafb 1px, transparent 1px) 0 0 / 12.5% 100%,
+        #ffffff;
+      overflow: hidden;
+    }
+
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .insight-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .insight {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent, var(--blue));
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }
+
+    .insight b {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .insight p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.58;
+    }
+
+    .split {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 14px;
+    }
+
+    .bars {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: grid;
+      gap: 6px;
+    }
+
+    .bar-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #edf2f4;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: var(--w, 50%);
+      border-radius: 999px;
+      background: var(--accent, var(--blue));
+    }
+
+    .table-wrap {
+      margin-top: 14px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: #fff;
+    }
+
+    th, td {
+      padding: 12px 13px;
+      text-align: left;
+      border-bottom: 1px solid #edf1f3;
+      white-space: nowrap;
+    }
+
+    th {
+      color: #4a5b65;
+      background: #f7fafb;
+      font-weight: 680;
+      font-size: 12px;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef6ff;
+      color: #1d4ed8;
+    }
+
+    .status.good { background: #e8f7ee; color: var(--green); }
+    .status.warn { background: #fff4df; color: #a16207; }
+    .status.bad { background: #fdecec; color: var(--red); }
+
+    .creative-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .creative {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .thumb {
+      aspect-ratio: 16 / 9;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255,255,255,.88) 0 8%, transparent 9%),
+        linear-gradient(135deg, var(--accent), #1f2937 68%);
+      position: relative;
+    }
+
+    .thumb::before {
+      content: "";
+      position: absolute;
+      left: 12%;
+      bottom: 16%;
+      width: 54%;
+      height: 11%;
+      border-radius: 999px;
+      background: rgba(255,255,255,.88);
+    }
+
+    .thumb::after {
+      content: "";
+      position: absolute;
+      right: 12%;
+      top: 19%;
+      width: 22%;
+      height: 40%;
+      border-radius: 7px;
+      border: 2px solid rgba(255,255,255,.78);
+    }
+
+    .creative-body {
+      padding: 10px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .creative h4 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .creative dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .creative dd,
+    .creative dt { margin: 0; }
+    .creative dd { color: var(--ink); font-weight: 700; margin-top: 2px; }
+
+    .empty-note {
+      margin: 16px 0 0;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff8e8;
+      color: #805b10;
+      border: 1px solid #f5dfa6;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1080px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        position: relative;
+        height: auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .sidebar-note { display: none; }
+      .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .content-grid,
+      .split { grid-template-columns: 1fr; }
+      .creative-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 720px) {
+      main { padding: 18px 14px 28px; }
+      .sidebar { padding: 16px; grid-template-columns: 1fr; }
+      .topbar { display: grid; }
+      .controls { justify-content: stretch; min-width: 0; }
+      .select-wrap,
+      .ghost-btn { flex: 1 1 160px; justify-content: center; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric strong { font-size: 20px; }
+      .chart-wrap { height: 260px; }
+      .creative-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand" aria-label="Axon 和 Mintegral 广告数据分析看板">
+        <div class="brand-mark"></div>
+        <div>
+          <h1>广告数据分析看板</h1>
+          <p>Axon / Mintegral</p>
+        </div>
+      </div>
+
+      <div class="nav-group" id="platformNav">
+        <div class="nav-label">广告平台</div>
+      </div>
+
+      <div class="nav-group" id="reportNav">
+        <div class="nav-label">分析模块</div>
+      </div>
+
+      <div class="sidebar-note">
+        当前页面使用结构化示例数据承载版式。拿到真实账户、素材、项目数据后，可直接替换脚本里的 DATA 数据源。
+      </div>
+    </aside>
+
+    <main>
+      <section class="topbar">
+        <div class="title-block">
+          <h2 id="pageTitle">Axon 数据总览</h2>
+          <p id="pageDesc">账户投放、素材表现和分项目报告整合在同一个可切换视图中，方便横向比较平台效率与增长质量。</p>
+        </div>
+        <div class="controls">
+          <label class="select-wrap" title="选择统计周期">
+            <span>周期</span>
+            <select id="periodSelect">
+              <option value="30">近 30 天</option>
+              <option value="14">近 14 天</option>
+              <option value="7">近 7 天</option>
+            </select>
+          </label>
+          <button class="ghost-btn" id="exportBtn" title="导出当前视图数据">导出 JSON</button>
+        </div>
+      </section>
+
+      <section class="grid kpi-grid" id="kpiGrid" aria-label="关键指标"></section>
+
+      <section class="grid content-grid">
+        <div>
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h3 class="panel-title" id="chartTitle">趋势表现</h3>
+                <p class="panel-subtitle" id="chartSubtitle">消耗、收入、ROI 按日走势</p>
+              </div>
+              <div class="legend" id="legend"></div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="trendChart" width="1000" height="420" aria-label="趋势图"></canvas>
+            </div>
+          </article>
+
+          <div class="grid split">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title" id="breakdownTitle">结构拆解</h3>
+                  <p class="panel-subtitle">按当前模块的核心维度排序</p>
+                </div>
+              </div>
+              <div class="bars" id="breakdownBars"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">效率分布</h3>
+                  <p class="panel-subtitle">ROI / CPA / 转化贡献交叉查看</p>
+                </div>
+              </div>
+              <div class="bars" id="efficiencyBars"></div>
+            </article>
+          </div>
+
+          <article class="panel" style="margin-top:14px">
+            <div class="panel-head">
+              <div>
+                <h3 class="panel-title" id="tableTitle">明细数据</h3>
+                <p class="panel-subtitle" id="tableSubtitle">按表现优先级排序</p>
+              </div>
+            </div>
+            <div id="dynamicBlock"></div>
+          </article>
+        </div>
+
+        <aside class="insight-stack" id="insightStack" aria-label="分析结论"></aside>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const DATA = {
+      axon: {
+        name: "Axon",
+        accent: "#0f766e",
+        description: "Axon 模块聚焦账户健康度、素材转化效率与分项目盈利质量，适合看预算扩量和 ROI 稳定性。",
+        kpis: [
+          ["消耗", "$128.4K", "+12.8%", "up", [18, 24, 22, 30, 34, 39, 43]],
+          ["收入", "$181.2K", "+16.4%", "up", [20, 22, 29, 31, 37, 45, 52]],
+          ["ROI", "1.41", "+3.2%", "up", [1.19, 1.21, 1.32, 1.28, 1.36, 1.39, 1.41]],
+          ["CPA", "$18.6", "-6.1%", "up", [24, 22, 21, 20, 19, 18.8, 18.6]],
+          ["转化", "6,904", "+18.1%", "up", [620, 710, 760, 880, 940, 1040, 1120]],
+          ["CTR", "2.84%", "-0.4%", "down", [2.9, 3.1, 2.8, 2.95, 2.88, 2.86, 2.84]]
+        ],
+        trend: [
+          ["06-01", 3900, 5150, 1.32], ["06-02", 4100, 5480, 1.34], ["06-03", 4320, 5930, 1.37],
+          ["06-04", 4280, 5840, 1.36], ["06-05", 4650, 6620, 1.42], ["06-06", 4780, 6990, 1.46],
+          ["06-07", 4510, 6120, 1.36], ["06-08", 4960, 7260, 1.46], ["06-09", 5180, 7390, 1.43],
+          ["06-10", 5420, 7820, 1.44]
+        ],
+        reports: {
+          account: {
+            label: "账户数据分析",
+            chartTitle: "账户层级趋势表现",
+            chartSubtitle: "消耗与收入增长同步，ROI 在 1.36-1.46 区间震荡",
+            breakdownTitle: "账户消耗结构",
+            tableTitle: "账户表现明细",
+            insights: [
+              ["预算扩量", "主力账户 A-03 与 A-06 承接新增预算后 ROI 仍高于均值，适合作为下一轮扩量池。", "#0f766e"],
+              ["成本风险", "A-02 的 CPA 连续抬升，主要来自中尾部兴趣包转化率下降，应先收缩低效人群。", "#b91c1c"],
+              ["优化动作", "建议把新增预算的 60% 分配给高 ROI 账户，剩余预算用于测试新地区和新版素材。", "#2563eb"]
+            ],
+            breakdown: [["A-03 北美", 28], ["A-06 拉美", 22], ["A-01 欧洲", 18], ["A-04 东南亚", 15], ["A-02 中东", 10], ["A-05 其他", 7]],
+            efficiency: [["ROI > 1.5", 36], ["ROI 1.2-1.5", 44], ["ROI < 1.2", 20]],
+            rows: [
+              ["A-03 北美", "$36.2K", "$56.8K", "1.57", "$16.4", "增长"],
+              ["A-06 拉美", "$28.4K", "$42.0K", "1.48", "$17.1", "增长"],
+              ["A-01 欧洲", "$23.1K", "$31.4K", "1.36", "$19.2", "稳定"],
+              ["A-04 东南亚", "$19.6K", "$27.1K", "1.38", "$18.7", "稳定"],
+              ["A-02 中东", "$12.9K", "$14.8K", "1.15", "$25.3", "预警"]
+            ]
+          },
+          creative: {
+            label: "素材数据分析",
+            chartTitle: "素材投放趋势表现",
+            chartSubtitle: "短视频素材贡献主要增量，静态图进入疲劳期",
+            breakdownTitle: "素材类型贡献",
+            tableTitle: "素材表现明细",
+            insights: [
+              ["爆量素材", "功能演示类短视频兼具高 CTR 和低 CPA，建议拆分开头 3 秒继续做变体。", "#0f766e"],
+              ["疲劳信号", "UGC 口播素材点击率仍高，但转化率走低，落地页承接或承诺表达需要复查。", "#b45309"],
+              ["生产方向", "下一批素材优先做强对比前后效果、价格锚点和场景化痛点三个方向。", "#2563eb"]
+            ],
+            breakdown: [["短视频", 46], ["UGC 口播", 24], ["静态图", 14], ["试玩", 10], ["轮播", 6]],
+            efficiency: [["新素材贡献", 42], ["成熟素材贡献", 38], ["疲劳素材贡献", 20]],
+            creatives: [
+              ["功能演示 15s", "3.42%", "$14.8", "1.68", "#0f766e"],
+              ["痛点对比 20s", "3.05%", "$16.2", "1.53", "#2563eb"],
+              ["UGC 口播 30s", "2.96%", "$18.7", "1.37", "#b45309"],
+              ["静态权益图", "1.88%", "$24.6", "1.09", "#7c3aed"],
+              ["场景故事 25s", "2.44%", "$19.9", "1.31", "#be123c"],
+              ["试玩引导", "2.12%", "$21.3", "1.24", "#0891b2"]
+            ]
+          },
+          project: {
+            label: "分项目数据报告",
+            chartTitle: "项目收入与 ROI 趋势",
+            chartSubtitle: "Project Alpha 贡献最高，Project Gamma 需要控制成本",
+            breakdownTitle: "项目收入占比",
+            tableTitle: "项目表现明细",
+            insights: [
+              ["核心项目", "Project Alpha 保持最高收入贡献且成本可控，是 Axon 当前最稳的利润来源。", "#0f766e"],
+              ["机会项目", "Project Beta 转化量提升明显，但 ROI 仍低于 Alpha，可结合素材扩量继续验证。", "#2563eb"],
+              ["止损观察", "Project Gamma 的 CPA 高于组合均值 26%，建议设置更严格的预算上限。", "#b91c1c"]
+            ],
+            breakdown: [["Project Alpha", 41], ["Project Beta", 27], ["Project Delta", 18], ["Project Gamma", 14]],
+            efficiency: [["利润贡献", 45], ["规模贡献", 35], ["测试贡献", 20]],
+            rows: [
+              ["Project Alpha", "$52.8K", "$83.7K", "1.59", "$15.9", "增长"],
+              ["Project Beta", "$34.6K", "$47.8K", "1.38", "$18.8", "稳定"],
+              ["Project Delta", "$23.1K", "$31.0K", "1.34", "$19.5", "稳定"],
+              ["Project Gamma", "$17.9K", "$18.7K", "1.04", "$27.3", "预警"]
+            ]
+          }
+        }
+      },
+      mintegral: {
+        name: "Mintegral",
+        accent: "#b45309",
+        description: "Mintegral 模块侧重渠道买量效率、素材生命周期和项目预算分配，适合看网络流量质量与规模化边界。",
+        kpis: [
+          ["消耗", "$96.7K", "+8.3%", "up", [14, 17, 21, 25, 27, 29, 31]],
+          ["收入", "$123.5K", "+9.9%", "up", [16, 20, 23, 27, 31, 34, 37]],
+          ["ROI", "1.28", "+1.4%", "up", [1.2, 1.23, 1.25, 1.24, 1.27, 1.26, 1.28]],
+          ["CPA", "$21.4", "+2.7%", "down", [20.3, 20.8, 21, 20.7, 21.2, 21.6, 21.4]],
+          ["转化", "4,518", "+5.4%", "up", [430, 470, 520, 570, 610, 660, 710]],
+          ["CTR", "2.31%", "+0.8%", "up", [2.15, 2.21, 2.2, 2.26, 2.28, 2.32, 2.31]]
+        ],
+        trend: [
+          ["06-01", 3120, 3840, 1.23], ["06-02", 3260, 4030, 1.24], ["06-03", 3350, 4200, 1.25],
+          ["06-04", 3520, 4380, 1.24], ["06-05", 3660, 4630, 1.26], ["06-06", 3710, 4700, 1.27],
+          ["06-07", 3590, 4440, 1.24], ["06-08", 3890, 4940, 1.27], ["06-09", 3970, 5060, 1.27],
+          ["06-10", 4110, 5270, 1.28]
+        ],
+        reports: {
+          account: {
+            label: "账户数据分析",
+            chartTitle: "账户层级趋势表现",
+            chartSubtitle: "规模增长平稳，但 CPA 在高预算账户出现轻微上行",
+            breakdownTitle: "账户消耗结构",
+            tableTitle: "账户表现明细",
+            insights: [
+              ["稳定盘", "M-01 和 M-04 的 ROI 高于平台均值，流量质量稳定，可维持预算优先级。", "#b45309"],
+              ["边际成本", "M-02 放量后 CPA 抬升，说明可扩流量池变窄，需要用素材更新抵消疲劳。", "#b91c1c"],
+              ["测试建议", "保留 15%-20% 预算测试新子渠道，避免全部预算集中在同一流量层。", "#2563eb"]
+            ],
+            breakdown: [["M-01 核心", 31], ["M-04 增长", 24], ["M-02 放量", 21], ["M-03 测试", 15], ["M-05 长尾", 9]],
+            efficiency: [["ROI > 1.35", 30], ["ROI 1.1-1.35", 52], ["ROI < 1.1", 18]],
+            rows: [
+              ["M-01 核心", "$30.1K", "$42.9K", "1.43", "$18.9", "增长"],
+              ["M-04 增长", "$23.2K", "$31.2K", "1.34", "$20.1", "稳定"],
+              ["M-02 放量", "$20.4K", "$24.5K", "1.20", "$23.8", "预警"],
+              ["M-03 测试", "$14.7K", "$17.6K", "1.20", "$22.4", "稳定"],
+              ["M-05 长尾", "$8.3K", "$7.3K", "0.88", "$31.0", "预警"]
+            ]
+          },
+          creative: {
+            label: "素材数据分析",
+            chartTitle: "素材生命周期趋势",
+            chartSubtitle: "互动式素材转化更稳，常规视频素材开始进入衰退段",
+            breakdownTitle: "素材类型贡献",
+            tableTitle: "素材表现明细",
+            insights: [
+              ["互动优势", "Playable 素材 CPA 最低，尤其在中高意向流量层表现更稳。", "#b45309"],
+              ["视频疲劳", "常规视频素材 CTR 未明显下降，但 CVR 下滑，建议更新后半段卖点和 CTA。", "#b91c1c"],
+              ["扩展方向", "Mintegral 可以加大轻互动、奖励提示和首屏结果展示素材占比。", "#2563eb"]
+            ],
+            breakdown: [["Playable", 35], ["短视频", 29], ["插屏图", 18], ["原生图文", 12], ["其他", 6]],
+            efficiency: [["新素材贡献", 34], ["成熟素材贡献", 46], ["疲劳素材贡献", 20]],
+            creatives: [
+              ["Playable A", "2.78%", "$17.6", "1.46", "#b45309"],
+              ["奖励提示 15s", "2.52%", "$19.3", "1.37", "#0f766e"],
+              ["首屏结果展示", "2.41%", "$20.6", "1.31", "#2563eb"],
+              ["常规视频 20s", "2.20%", "$23.4", "1.17", "#be123c"],
+              ["插屏权益图", "1.86%", "$25.1", "1.08", "#7c3aed"],
+              ["原生图文", "1.74%", "$24.8", "1.11", "#0891b2"]
+            ]
+          },
+          project: {
+            label: "分项目数据报告",
+            chartTitle: "项目收入与 ROI 趋势",
+            chartSubtitle: "Project Orion 规模最大，Project Nova 处于验证期",
+            breakdownTitle: "项目收入占比",
+            tableTitle: "项目表现明细",
+            insights: [
+              ["规模项目", "Project Orion 收入占比最高，但 ROI 只有小幅领先，应重点关注成本拐点。", "#b45309"],
+              ["效率项目", "Project Lyra 体量较小但 ROI 最好，值得增加预算验证上限。", "#0f766e"],
+              ["验证项目", "Project Nova 的转化成本偏高，建议先缩小地区和渠道范围。", "#b91c1c"]
+            ],
+            breakdown: [["Project Orion", 38], ["Project Lyra", 25], ["Project Vega", 21], ["Project Nova", 16]],
+            efficiency: [["利润贡献", 36], ["规模贡献", 44], ["测试贡献", 20]],
+            rows: [
+              ["Project Orion", "$36.8K", "$49.1K", "1.33", "$20.2", "增长"],
+              ["Project Lyra", "$24.2K", "$35.6K", "1.47", "$17.9", "增长"],
+              ["Project Vega", "$20.4K", "$24.3K", "1.19", "$23.1", "稳定"],
+              ["Project Nova", "$15.3K", "$14.5K", "0.95", "$30.8", "预警"]
+            ]
+          }
+        }
+      }
+    };
+
+    const state = { platform: "axon", report: "account", period: "30" };
+    const REPORT_ORDER = ["account", "creative", "project"];
+    const KPI_LABELS = {
+      account: "账户数据分析",
+      creative: "素材数据分析",
+      project: "分项目数据报告"
+    };
+
+    const el = (id) => document.getElementById(id);
+
+    function init() {
+      renderPlatformNav();
+      renderReportNav();
+      el("periodSelect").addEventListener("change", (event) => {
+        state.period = event.target.value;
+        render();
+      });
+      el("exportBtn").addEventListener("click", exportCurrentData);
+      render();
+      window.addEventListener("resize", () => drawTrend());
+    }
+
+    function renderPlatformNav() {
+      const nav = el("platformNav");
+      Object.keys(DATA).forEach((key) => {
+        const platform = DATA[key];
+        const button = document.createElement("button");
+        button.className = "platform-btn";
+        button.dataset.platform = key;
+        button.innerHTML = `<span class="left"><span class="swatch" style="--accent:${platform.accent}"></span><span>${platform.name}</span></span><span class="pill">平台</span>`;
+        button.addEventListener("click", () => {
+          state.platform = key;
+          render();
+        });
+        nav.appendChild(button);
+      });
+    }
+
+    function renderReportNav() {
+      const nav = el("reportNav");
+      REPORT_ORDER.forEach((key) => {
+        const button = document.createElement("button");
+        button.className = "report-btn";
+        button.dataset.report = key;
+        button.innerHTML = `<span class="left"><span>${navIcon(key)}</span><span>${KPI_LABELS[key]}</span></span><span>›</span>`;
+        button.addEventListener("click", () => {
+          state.report = key;
+          render();
+        });
+        nav.appendChild(button);
+      });
+    }
+
+    function navIcon(key) {
+      return { account: "▦", creative: "◧", project: "▤" }[key];
+    }
+
+    function render() {
+      const platform = DATA[state.platform];
+      const report = platform.reports[state.report];
+      document.documentElement.style.setProperty("--accent", platform.accent);
+      el("pageTitle").textContent = `${platform.name} ${report.label}`;
+      el("pageDesc").textContent = platform.description;
+      el("chartTitle").textContent = report.chartTitle;
+      el("chartSubtitle").textContent = report.chartSubtitle;
+      el("breakdownTitle").textContent = report.breakdownTitle;
+      el("tableTitle").textContent = report.tableTitle;
+      el("tableSubtitle").textContent = `${platform.name} / ${report.label} / 近 ${state.period} 天`;
+
+      document.querySelectorAll(".platform-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.platform === state.platform);
+      });
+      document.querySelectorAll(".report-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.report === state.report);
+      });
+
+      renderKpis(platform);
+      renderLegend(platform);
+      renderBars("breakdownBars", report.breakdown, platform.accent);
+      renderBars("efficiencyBars", report.efficiency, "#2563eb");
+      renderInsights(report);
+      renderDynamicBlock(report);
+      drawTrend();
+    }
+
+    function renderKpis(platform) {
+      el("kpiGrid").innerHTML = platform.kpis.map(([label, value, delta, direction, points]) => `
+        <article class="card">
+          <div class="label">${label}</div>
+          <div class="metric">
+            <strong>${value}</strong>
+            <span class="delta ${direction === "down" ? "down" : ""}">${delta}</span>
+          </div>
+          ${sparkline(points, platform.accent)}
+        </article>
+      `).join("");
+    }
+
+    function sparkline(points, color) {
+      const width = 180;
+      const height = 22;
+      const min = Math.min(...points);
+      const max = Math.max(...points);
+      const range = max - min || 1;
+      const coords = points.map((point, index) => {
+        const x = (index / (points.length - 1)) * width;
+        const y = height - ((point - min) / range) * (height - 3) - 1.5;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(" ");
+      return `<svg class="spark" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="${color}" stroke-width="2.4" points="${coords}"></polyline></svg>`;
+    }
+
+    function renderLegend(platform) {
+      el("legend").innerHTML = `
+        <span><i class="dot" style="--dot:${platform.accent}"></i>收入</span>
+        <span><i class="dot" style="--dot:#2563eb"></i>消耗</span>
+        <span><i class="dot" style="--dot:#b91c1c"></i>ROI</span>
+      `;
+    }
+
+    function renderBars(targetId, rows, color) {
+      const max = Math.max(...rows.map((row) => row[1]));
+      el(targetId).innerHTML = rows.map(([label, value]) => `
+        <div class="bar-row">
+          <div class="bar-meta"><strong>${label}</strong><span>${value}%</span></div>
+          <div class="bar-track"><div class="bar-fill" style="--w:${Math.round((value / max) * 100)}%; --accent:${color}"></div></div>
+        </div>
+      `).join("");
+    }
+
+    function renderInsights(report) {
+      el("insightStack").innerHTML = report.insights.map(([title, text, color]) => `
+        <article class="insight" style="--accent:${color}">
+          <b>${title}</b>
+          <p>${text}</p>
+        </article>
+      `).join("") + `
+        <article class="insight" style="--accent:#4b5563">
+          <b>数据接入状态</b>
+          <p>当前为示例结构。把真实数据字段映射到 DATA 对象后，账户、素材、项目三个模块会自动按同一套组件渲染。</p>
+        </article>
+      `;
+    }
+
+    function renderDynamicBlock(report) {
+      if (state.report === "creative") {
+        el("dynamicBlock").innerHTML = `
+          <div class="creative-list">
+            ${report.creatives.map(([name, ctr, cpa, roi, color]) => `
+              <article class="creative">
+                <div class="thumb" style="--accent:${color}"></div>
+                <div class="creative-body">
+                  <h4>${name}</h4>
+                  <dl>
+                    <div><dt>CTR</dt><dd>${ctr}</dd></div>
+                    <div><dt>CPA</dt><dd>${cpa}</dd></div>
+                    <div><dt>ROI</dt><dd>${roi}</dd></div>
+                  </dl>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+          <p class="empty-note">素材缩略图为占位视觉，用来表示不同素材类型。后续可以替换为真实视频封面、图片素材或素材 ID 链接。</p>
+        `;
+        return;
+      }
+
+      const headers = state.report === "account"
+        ? ["账户", "消耗", "收入", "ROI", "CPA", "状态"]
+        : ["项目", "消耗", "收入", "ROI", "CPA", "状态"];
+      el("dynamicBlock").innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead><tr>${headers.map((item) => `<th>${item}</th>`).join("")}</tr></thead>
+            <tbody>
+              ${report.rows.map((row) => `
+                <tr>
+                  ${row.map((cell, index) => index === row.length - 1 ? `<td>${statusTag(cell)}</td>` : `<td>${cell}</td>`).join("")}
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function statusTag(text) {
+      const cls = text === "增长" ? "good" : text === "预警" ? "bad" : "warn";
+      return `<span class="status ${cls}">${text}</span>`;
+    }
+
+    function drawTrend() {
+      const canvas = el("trendChart");
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(600, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(260, Math.floor(rect.height * dpr));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
+      const pad = { left: 46, right: 26, top: 24, bottom: 38 };
+      const plotW = width - pad.left - pad.right;
+      const plotH = height - pad.top - pad.bottom;
+      const platform = DATA[state.platform];
+      const trend = platform.trend;
+      const spend = trend.map((row) => row[1]);
+      const revenue = trend.map((row) => row[2]);
+      const roi = trend.map((row) => row[3]);
+      const moneyMax = Math.max(...spend, ...revenue) * 1.12;
+      const roiMax = Math.max(...roi) * 1.18;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.font = "12px Inter, Arial";
+      ctx.fillStyle = "#64727c";
+      ctx.strokeStyle = "#e7edf0";
+      ctx.lineWidth = 1;
+
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + (plotH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(width - pad.right, y);
+        ctx.stroke();
+        const label = `$${Math.round((moneyMax * (4 - i)) / 4000)}K`;
+        ctx.fillText(label, 10, y + 4);
+      }
+
+      trend.forEach((row, index) => {
+        const x = pad.left + (index / (trend.length - 1)) * plotW;
+        if (index % 2 === 0 || width > 760) {
+          ctx.fillStyle = "#64727c";
+          ctx.fillText(row[0], x - 16, height - 15);
+        }
+      });
+
+      drawLine(ctx, spend, "#2563eb", moneyMax, pad, plotW, plotH, false);
+      drawLine(ctx, revenue, platform.accent, moneyMax, pad, plotW, plotH, true);
+      drawLine(ctx, roi, "#b91c1c", roiMax, pad, plotW, plotH, false, true);
+    }
+
+    function drawLine(ctx, values, color, max, pad, plotW, plotH, fill, dashed) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.8;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      if (dashed) ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      values.forEach((value, index) => {
+        const x = pad.left + (index / (values.length - 1)) * plotW;
+        const y = pad.top + plotH - (value / max) * plotH;
+        index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (fill) {
+        const gradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+        gradient.addColorStop(0, color + "2e");
+        gradient.addColorStop(1, color + "00");
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.closePath();
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      }
+
+      values.forEach((value, index) => {
+        const x = pad.left + (index / (values.length - 1)) * plotW;
+        const y = pad.top + plotH - (value / max) * plotH;
+        ctx.beginPath();
+        ctx.fillStyle = "#fff";
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    function exportCurrentData() {
+      const payload = {
+        platform: state.platform,
+        report: state.report,
+        period: state.period,
+        data: DATA[state.platform].reports[state.report]
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${state.platform}-${state.report}-report.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    init();
+  </script>
+</body>
+</html>
